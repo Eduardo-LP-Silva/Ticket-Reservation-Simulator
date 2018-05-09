@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     mkfifo("requests", 770);
 
     int t;
-    requests = open("requests", O_RDONLY);
+    requests = open("requests", O_RDONLY | O_NONBLOCK);
     int order[1][MAX_CLI_SEATS];
     clock_t start = clock();
 

@@ -9,6 +9,7 @@
 #include <time.h>
 #include <signal.h>
 #include <string.h>
+#include <errno.h>
 
 #define MAX_ROOM_SEATS 9999
 #define MAX_CLI_SEATS 99
