@@ -1,5 +1,7 @@
 #include "server.h"
 
+int flag = 0;
+
 int main(int argc, char *argv[])
 {
     if(argc != 4)
@@ -20,7 +22,7 @@ int main(int argc, char *argv[])
 
     seats = createSeats(num_room_seats);
 
-    fdslog = open("slog.txt", O_WRONLY | O_CREAT, 0750);
+    fdslog = open("slog.txt", O_WRONLY | O_CREAT | O_TRUNC, 0750);
 
     remove("requests");
     if(mkfifo("requests", 0660) < 0)
@@ -54,10 +56,8 @@ int main(int argc, char *argv[])
     	}
     }
 
-   // while(1){}
-
-   //while((double) (clock() - start) / CLOCKS_PER_SEC <= open_time)
-   //{
+   while((double) (clock() - start) / CLOCKS_PER_SEC <= open_time)
+   {
     	int numRead = read(requests, reservations, (MAX_CLI_SEATS + 2) * sizeof(int));
     	int i = 0, j = 0;
         int num = 0;
@@ -74,13 +74,11 @@ int main(int argc, char *argv[])
         }
         order[0][j] = num;
         order_size = j+1;
-        //isReservationValid(order[0], j+1); //teste
-    //}
+    }
 
     for(t = 0; t < num_ticket_offices; t++)
     {
-    	pthread_join(tids[t], NULL);
-    	pthread_kill(tids[t], SIGINT);//ALARM?
+    	flag = 1;
     	writeOpenCloseLogFile(t+1, 0);
     }
     writeBookingsFile();
@@ -119,7 +117,7 @@ void writeOpenCloseLogFile(int thread, int open)
 
 void writeBookingsFile()
 {
-	int fdbook = open("sbook.txt", O_WRONLY | O_CREAT, 0750);
+	int fdbook = open("sbook.txt", O_WRONLY | O_CREAT | O_TRUNC, 0750);
 
 	for(int i = 1; i <= numRoomSeats; i++)
 	{
@@ -142,24 +140,47 @@ void *handleReservations(void *arg)
 	pthread_mutex_lock(&mut);
 	int thread = (int) arg;
 	writeOpenCloseLogFile(thread, 1);
-	int client_pid = order[0][0];
-	char* fifo_name = malloc(8* sizeof(char)), *pid_c = malloc(WIDTH_PID*sizeof(char));
-	strcat(fifo_name, "ans");
-	snprintf(pid_c, WIDTH_PID+1, "%d", client_pid);
-	for(int n = strlen(pid_c); n < WIDTH_PID; n++)
-		strcat(fifo_name, "0");
-	strcat(fifo_name, pid_c);
-	int fifo = open(fifo_name, O_WRONLY);
-	if(fifo < 0)
-	{
-		printf("error opening fifo: %s\n", fifo_name);
-		exit(1);
-	}
-	int invalid = isReservationValid(order[0], order_size);
-	write(fifo, invalid, 1);
-	close(fifo);
-	writeRequestSlog(thread, invalid, order[0], order_size);
 	pthread_mutex_unlock(&mut);
+
+	while(1)
+	{
+		pthread_mutex_lock(&mut);
+		if(order[0][0] == 0)
+		{
+			pthread_mutex_unlock(&mut);
+			continue;
+		}
+		int o_size = order_size;
+		int order1[o_size];
+		for(int i = 0; i < o_size; i++)
+		{
+			order1[i] = order[0][i];
+			order[0][i] = 0;
+		}
+		pthread_mutex_unlock(&mut);
+
+		int client_pid = order1[0];
+		char* fifo_name = malloc(8* sizeof(char)), *pid_c = malloc(WIDTH_PID*sizeof(char));
+		strcat(fifo_name, "ans");
+		snprintf(pid_c, WIDTH_PID+1, "%d", client_pid);
+		for(int n = strlen(pid_c); n < WIDTH_PID; n++)
+			strcat(fifo_name, "0");
+		strcat(fifo_name, pid_c);
+		int fifo = open(fifo_name, O_WRONLY);
+		if(fifo < 0)
+		{
+			printf("error opening fifo: %s\n", fifo_name);
+			exit(1);
+		}
+		pthread_mutex_lock(&mut);
+		int invalid = isReservationValid(order1, o_size);
+		writeRequestSlog(thread, invalid, order1, o_size);
+		pthread_mutex_unlock(&mut);
+		write(fifo, invalid, 1);
+		close(fifo);
+		if(flag == 1)
+			return NULL;
+	}
 	return NULL;
 }
 
@@ -218,8 +239,6 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 			write(fdslog, "NAV\n", 4);
 		else if (answer == -6)
 			write(fdslog, "FUL\n", 4);
-
-		write(fdslog, "\n", 1);
 		return;
 	}
 
