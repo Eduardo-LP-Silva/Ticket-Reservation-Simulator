@@ -35,6 +35,6 @@ void bookSeat(struct Seat *seats, int seatNum, int clientId);
 void freeSeat(struct Seat *seats, int seatNum);
 struct Seat* createSeats(int numSeats);
 void writeOpenCloseLogFile(int thread, int open);
-void writeBookingsFile(struct Seat *seats, int numSeats);
+void writeBookingsFile();
 int isReservationValid(int* reservation, int size);
 void writeRequestSlog(int thread, int answer, int* request, int size);

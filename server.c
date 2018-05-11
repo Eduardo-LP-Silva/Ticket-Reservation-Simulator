@@ -18,14 +18,7 @@ int main(int argc, char *argv[])
     	return -1;
     }
 
-    //TESTES
     seats = createSeats(num_room_seats);
-/*
-    printf("%d\n", isSeatFree(seats, 1));
-    bookSeat(seats, 1, 235);
-    printf("%d\n", isSeatFree(seats, 1));
-    writeBookingsFile(seats, num_room_seats);
-    return 0;*/
 
     fdslog = open("slog.txt", O_WRONLY | O_CREAT, 0750);
 
@@ -35,8 +28,6 @@ int main(int argc, char *argv[])
     	printf("error making fifo requests\n");
     	exit(2);
     }
-    else
-    	printf("successfully made fifo\n");
 
     int t;
     requests = open("requests", O_RDONLY);
@@ -45,8 +36,6 @@ int main(int argc, char *argv[])
     	printf("error opening fifo 'requests'\n");
     	exit(1);
     }
-    else
-    	printf("successfully opened requests\n");
 
     char reservations[MAX_CLI_SEATS];
     clock_t start = clock();
@@ -94,8 +83,7 @@ int main(int argc, char *argv[])
     	pthread_kill(tids[t], SIGINT);//ALARM?
     	writeOpenCloseLogFile(t+1, 0);
     }
-
-    writeBookingsFile(seats, num_room_seats);
+    writeBookingsFile();
     close(requests);
     unlink("requests");
     free(seats);
@@ -129,17 +117,21 @@ void writeOpenCloseLogFile(int thread, int open)
 		write(fdslog,"-CLOSE\n",7);
 }
 
-void writeBookingsFile(struct Seat *seats, int numSeats)
+void writeBookingsFile()
 {
 	int fdbook = open("sbook.txt", O_WRONLY | O_CREAT, 0750);
-	char* output = malloc(512);
-	for(int i = 0; i < numSeats; i++)
+
+	for(int i = 1; i <= numRoomSeats; i++)
 	{
-		if(!isSeatFree(seats, (seats+i*(sizeof(struct Seat)))->numSeat))
+		if(!isSeatFree(seats, i))
 		{
-			snprintf(output, 10, "%d",  (seats+i*(sizeof(struct Seat)))->numSeat);
+			char* output = malloc(512);
+			snprintf(output, 10, "%d",  i);
+			for(int n = strlen(output); n < WIDTH_SEAT; n++)
+				write(fdbook, "0", 1);
 			write(fdbook,output,10);
 			write(fdbook, "\n", 1);
+			free(output);
 		}
 	}
 	close(fdbook);
@@ -150,11 +142,6 @@ void *handleReservations(void *arg)
 	pthread_mutex_lock(&mut);
 	int thread = (int) arg;
 	writeOpenCloseLogFile(thread, 1);
-	//pthread_mutex_unlock(&mut);
-	//TESTES
-	int invalid2 = isReservationValid(order[0], order_size);
-	writeRequestSlog(thread, invalid2, order[0], order_size);
-	//FIM DE TESTES
 	int client_pid = order[0][0];
 	char* fifo_name = malloc(8* sizeof(char)), *pid_c = malloc(WIDTH_PID*sizeof(char));
 	strcat(fifo_name, "ans");
@@ -198,17 +185,16 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 		write(fdslog, "0", 1);
 	write(fdslog, output, 2);
 	write(fdslog, ": ", 2);
-	char* bought_seats[MAX_CLI_SEATS];
+	int bought_seats[MAX_CLI_SEATS];
 	int index = 0;
 	for(int n = 2; n < size; n++)
 	{
 		free(output);
 		output = malloc(512);
 		int seat_num = *(request+n);
-		snprintf(output, 5, "%d", *(request+n), seat_num);
+		snprintf(output, WIDTH_SEAT, "%d", seat_num);
 		if (getClientSeat(seats, seat_num) == *request) {
-			bought_seats[index] = malloc(WIDTH_SEAT);
-			bought_seats[index] = output;
+			bought_seats[index] = seat_num;
 			index++;
 		}
 		for(int i = strlen(output); i < WIDTH_SEAT; i++)
@@ -239,9 +225,13 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 
 	for(int i = 0; i < index; i++)
 	{
-		for(int j = strlen(bought_seats[i]); j < WIDTH_SEAT; j++)
+		free(output);
+		output = malloc(512);
+		snprintf(output, WIDTH_SEAT, "%d", bought_seats[i]);
+		for(int j = strlen(output); j < WIDTH_SEAT; j++)
 			write(fdslog, "0", 1);
-		write(fdslog, bought_seats[i], strlen(bought_seats[i]));
+		write(fdslog, output, strlen(output));
+		write(fdslog, " ", 1);
 	}
 	write(fdslog, "\n", 1);
 }
@@ -249,7 +239,7 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 int isSeatFree(struct Seat *seats, int seatNum)
 {
 	int isFree = 0;
-	if((seats+(seatNum-1)*sizeof(struct Seat))->clientId < 0)
+	if((seats+(seatNum-1)*sizeof(struct Seat))->clientId <= 0)
 		isFree = 1;
 	DELAY();
 	return isFree;
