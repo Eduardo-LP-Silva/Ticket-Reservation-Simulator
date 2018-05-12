@@ -8,11 +8,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     int time_out = atoi(argv[1]), num_wanted_seats = atoi(argv[2]);
-    int pref_seat_list[512];
-    for(int i = 3; i < argc; i++)
-    {
-       	pref_seat_list[i-3] = atoi(argv[i]);
-    }
 
     pid_t pid = getpid();
     char *fifo_name = malloc(8),  *pid_c = malloc(5);
@@ -27,6 +22,7 @@ int main(int argc, char *argv[])
 
     int requests = open("requests", O_WRONLY), response[argc - 2];
     char* request = malloc(512);
+    char response1[512];
 
 
     for(int n = strlen(pid_c); n < WIDTH_PID ; n++)
@@ -41,11 +37,11 @@ int main(int argc, char *argv[])
     write(requests, request, strlen(request));
 
     clock_t start = clock();
-    int answer = open(fifo_name, O_RDONLY);
+    int answer = open(fifo_name, O_RDONLY), answer_size;
 
     while((double) (clock() - start) / CLOCKS_PER_SEC <= time_out)
     {
-        read(answer, response, (argc - 2)*sizeof(int));
+        answer_size = read(answer, response1, (argc - 2)*sizeof(int));
 
         if(errno == EAGAIN)
         {
@@ -57,8 +53,8 @@ int main(int argc, char *argv[])
     }
     close(answer);
 
-    FILE *clog = fopen("clog.txt", "a");
-    FILE *cbook = fopen("cbook.txt", "a");
+    FILE *clog = fopen("clog.txt", "w");
+    FILE *cbook = fopen("cbook.txt", "w");
 
     if((double) (clock() - start) / CLOCKS_PER_SEC > time_out)
     {
@@ -67,14 +63,30 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if(response[0] > 0)
-        for(int i = 1; i < response[0]; i++)
-            {
-                fprintf(clog, "%05d %02d.%02d %04d\n", pid, i + 1, response[0], response[i]);
-                fprintf(cbook, "%04d\n", response[i]);
-            }
+    if(answer_size > 2)
+    {
+    	int num = 0, i = 0, j = 0;
+		while (i < answer_size) {
+			if (response1[i] != ' ')
+				num = num * 10 + response1[i] - '0';
+			else {
+				response[j] = num;
+				num = 0;
+				j++;
+			}
+			i++;
+		}
+		response[j] = num;
+
+		for (int i = 0; i < num_wanted_seats; i++) {
+			fprintf(clog, "%05d %02d.%02d %04d\n", pid, i + 1, num_wanted_seats,
+					response[i]);
+			fprintf(cbook, "%04d\n", response[i]);
+		}
+    }
     else
     {
+    	response[0] = -1*(response1[1]-'0');
         fprintf(clog, "%05d ", pid);
 
         if(response[0] == -1)

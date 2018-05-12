@@ -1,7 +1,5 @@
 #include "server.h"
 
-int flag = 0;
-
 int main(int argc, char *argv[])
 {
     if(argc != 4)
@@ -13,6 +11,7 @@ int main(int argc, char *argv[])
     int num_room_seats = atoi(argv[1]), num_ticket_offices = atoi(argv[2]), 
         open_time = atoi(argv[3]);
     numRoomSeats = atoi(argv[1]);
+    order[0][0] = -1;
 
     if(num_room_seats < 0 || num_ticket_offices < 0 || open_time < 0)
     {
@@ -58,6 +57,8 @@ int main(int argc, char *argv[])
 
    while((double) (clock() - start) / CLOCKS_PER_SEC <= open_time)
    {
+	   if(order[0][0] > 0)
+		   continue;
     	int numRead = read(requests, reservations, (MAX_CLI_SEATS + 2) * sizeof(int));
     	int i = 0, j = 0;
         int num = 0;
@@ -76,11 +77,9 @@ int main(int argc, char *argv[])
         order_size = j+1;
     }
 
-    for(t = 0; t < num_ticket_offices; t++)
-    {
-    	flag = 1;
-    	writeOpenCloseLogFile(t+1, 0);
-    }
+    for(int n = 1; n <= num_ticket_offices; n++)
+    	pthread_join(tids[n], NULL);
+
     writeBookingsFile();
     close(requests);
     unlink("requests");
@@ -137,15 +136,21 @@ void writeBookingsFile()
 
 void *handleReservations(void *arg)
 {
-	pthread_mutex_lock(&mut);
+	pthread_mutex_lock(&mut3);
 	int thread = (int) arg;
 	writeOpenCloseLogFile(thread, 1);
-	pthread_mutex_unlock(&mut);
+	pthread_mutex_unlock(&mut3);
 
 	while(1)
 	{
+		if (flag == 1) {
+			pthread_mutex_lock(&mut3);
+			writeOpenCloseLogFile(thread, 0);
+			pthread_mutex_unlock(&mut3);
+			break;
+		}
 		pthread_mutex_lock(&mut);
-		if(order[0][0] == 0)
+		if(order[0][0] <= 0)
 		{
 			pthread_mutex_unlock(&mut);
 			continue;
@@ -172,14 +177,35 @@ void *handleReservations(void *arg)
 			printf("error opening fifo: %s\n", fifo_name);
 			exit(1);
 		}
-		pthread_mutex_lock(&mut);
+		pthread_mutex_lock(&mut2);
 		int invalid = isReservationValid(order1, o_size);
+		pthread_mutex_unlock(&mut2);
+		pthread_mutex_lock(&mut3);
 		writeRequestSlog(thread, invalid, order1, o_size);
-		pthread_mutex_unlock(&mut);
-		write(fifo, invalid, 1);
+		pthread_mutex_unlock(&mut3);
+		char* invalid1 = malloc(2);
+		snprintf(invalid1, 3, "%d", invalid);
+		if(invalid < 0)
+			write(fifo, invalid1, 2);
+		else
+		{
+			char* booked_seats = malloc(512);
+			for(int i = 2; i < o_size; i++)
+			{
+				int seat_num = order1[i];
+				if(getClientSeat(seats, seat_num) == order1[0])
+				{
+					char* output = malloc(10);
+					snprintf(output, WIDTH_SEAT, "%d", order1[i]);
+					for(int n = strlen(output); n < WIDTH_SEAT; n++)
+						strcat(booked_seats, "0");
+					strcat(booked_seats, output);
+					strcat(booked_seats, " ");
+				}
+			}
+			write(fifo, booked_seats, strlen(booked_seats));
+		}
 		close(fifo);
-		if(flag == 1)
-			return NULL;
 	}
 	return NULL;
 }
@@ -294,10 +320,10 @@ int isRoomFull(struct Seat *seats)
 int isReservationValid(int* reservation, int size)
 {
 	int client_pid = *reservation;
-	int num_wanted_seats = *(reservation+1);//sizeof(int));
+	int num_wanted_seats = *(reservation+1);
 	if(num_wanted_seats > MAX_CLI_SEATS)
 		return -1;
-	else if(client_pid < 0 || num_wanted_seats < 0)
+	else if(client_pid <= 0 || num_wanted_seats <= 0)
 		return -4;
 	else if(size-2 > MAX_CLI_SEATS || size - 2 < num_wanted_seats)
 		return -2;
