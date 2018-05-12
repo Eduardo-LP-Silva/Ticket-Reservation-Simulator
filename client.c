@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
     }
     close(answer);
 
-    FILE *clog = fopen("clog.txt", "w");
-    FILE *cbook = fopen("cbook.txt", "w");
+    FILE *clog = fopen("clog.txt", "a");
+    FILE *cbook = fopen("cbook.txt", "a");
 
     if((double) (clock() - start) / CLOCKS_PER_SEC > time_out)
     {
