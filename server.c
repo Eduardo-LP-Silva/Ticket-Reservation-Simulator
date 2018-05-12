@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     int num_room_seats = atoi(argv[1]), num_ticket_offices = atoi(argv[2]), 
         open_time = atoi(argv[3]);
     numRoomSeats = atoi(argv[1]);
-    order[0][0] = -1;
+    order_size = 0;
 
     if(num_room_seats < 0 || num_ticket_offices < 0 || open_time < 0)
     {
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     }
 
     int t;
-    requests = open("requests", O_RDONLY);
+    requests = open("requests", O_RDONLY | O_NONBLOCK);
     if(requests<0)
     {
     	printf("error opening fifo 'requests'\n");
@@ -77,12 +77,13 @@ int main(int argc, char *argv[])
         order_size = j+1;
     }
 
+    flag = 1;
     for(int n = 1; n <= num_ticket_offices; n++)
     	pthread_join(tids[n], NULL);
 
     writeBookingsFile();
-    close(requests);
-    unlink("requests");
+    //close(requests);
+    //unlink("requests");
     free(seats);
 
     return 0;
@@ -150,12 +151,13 @@ void *handleReservations(void *arg)
 			break;
 		}
 		pthread_mutex_lock(&mut);
-		if(order[0][0] <= 0)
+		if(order_size <= 0 || order[0][0] <= 0)
 		{
 			pthread_mutex_unlock(&mut);
 			continue;
 		}
 		int o_size = order_size;
+		order_size = 0;
 		int order1[o_size];
 		for(int i = 0; i < o_size; i++)
 		{
