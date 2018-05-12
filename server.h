@@ -19,9 +19,11 @@
 #define DELAY()
 
 struct Seat* seats;
-int requests, fdslog, numRoomSeats, order_size;
+int requests, fdslog, numRoomSeats, order_size, flag = 0;
 int order[1][MAX_CLI_SEATS];
-pthread_mutex_t mut=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mut=PTHREAD_MUTEX_INITIALIZER; //to receive order
+pthread_mutex_t mut2=PTHREAD_MUTEX_INITIALIZER; //to make reservation
+pthread_mutex_t mut3=PTHREAD_MUTEX_INITIALIZER; //to write on file
 
 struct Seat
 {
@@ -38,3 +40,5 @@ void writeOpenCloseLogFile(int thread, int open);
 void writeBookingsFile();
 int isReservationValid(int* reservation, int size);
 void writeRequestSlog(int thread, int answer, int* request, int size);
+int isRoomFull(struct Seat *seats);
+int getClientSeat(struct Seat *seats, int seatNum);

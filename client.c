@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     printf("%s\n",fifo_name);
     mkfifo(fifo_name,  0660);
 
-    int requests = open("requests", O_WRONLY), response[argc - 2];
+    int requests = open("requests", O_WRONLY | O_NONBLOCK), response[argc - 2];
     char* request = malloc(512);
     char response1[512];
 
@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
 
     if((double) (clock() - start) / CLOCKS_PER_SEC > time_out)
     {
-        printf("Client TimeOut\n");
         fprintf(clog, "%05d OUT\n", pid); //width pid
         return 1;
     }

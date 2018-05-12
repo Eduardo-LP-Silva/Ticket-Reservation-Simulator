@@ -78,14 +78,13 @@ int main(int argc, char *argv[])
     }
 
     flag = 1;
-    for(int n = 1; n <= num_ticket_offices; n++)
+    for(int n = 0; n < num_ticket_offices; n++)
     	pthread_join(tids[n], NULL);
 
     writeBookingsFile();
     //close(requests);
     //unlink("requests");
     free(seats);
-
     return 0;
 }
 
@@ -238,9 +237,11 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 	int index = 0;
 	for(int n = 2; n < size; n++)
 	{
+		int seat_num = *(request+n);
+		if(seat_num <= 0 || seat_num > numRoomSeats)
+			continue;
 		free(output);
 		output = malloc(512);
-		int seat_num = *(request+n);
 		snprintf(output, WIDTH_SEAT, "%d", seat_num);
 		if (getClientSeat(seats, seat_num) == *request) {
 			bought_seats[index] = seat_num;
