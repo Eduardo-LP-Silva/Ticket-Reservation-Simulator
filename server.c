@@ -109,7 +109,7 @@ void writeOpenCloseLogFile(int thread, int open)
 	if (strlen(output) == 1) {
 		write(fdslog, "0", 1);
 	}
-	write(fdslog, output, 2);
+	write(fdslog, output, strlen(output));
 	if(open)
 		write(fdslog, "-OPEN\n", 6);
 	else
@@ -125,12 +125,11 @@ void writeBookingsFile()
 		if(!isSeatFree(seats, i))
 		{
 			char* output = malloc(512);
-			snprintf(output, 10, "%d",  i);
+			snprintf(output, 6, "%d",  i);
 			for(int n = strlen(output); n < WIDTH_SEAT; n++)
 				write(fdbook, "0", 1);
-			write(fdbook,output,10);
+			write(fdbook,output,strlen(output));
 			write(fdbook, "\n", 1);
-			free(output);
 		}
 	}
 	close(fdbook);
@@ -219,21 +218,21 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 	snprintf(output, 3, "%d", thread);
 	if (strlen(output) == 1)
 		write(fdslog, "0", 1);
-	write(fdslog, output, 2);
+	write(fdslog, output, strlen(output));
 	write(fdslog, "-", 1);
 	free(output);
 	output = malloc(512);
 	snprintf(output, WIDTH_PID+1, "%d", *(request));
 	for(int n = strlen(output); n < WIDTH_PID; n++)
 		write(fdslog, "0", 1);
-	write(fdslog, output, WIDTH_PID);
+	write(fdslog, output, strlen(output));
 	write(fdslog, "-", 1);
 	free(output);
 	output = malloc(512);
 	snprintf(output, 3, "%d", *(request+1));
 	if(strlen(output) == 1)
 		write(fdslog, "0", 1);
-	write(fdslog, output, 2);
+	write(fdslog, output, strlen(output));
 	write(fdslog, ": ", 2);
 	int bought_seats[MAX_CLI_SEATS];
 	int index = 0;
