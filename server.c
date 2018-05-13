@@ -334,11 +334,15 @@ int isReservationValid(int* reservation, int size)
 	else if(isRoomFull(seats))
 		return -6;
 	int booked_seats = 0;
+	int error = 0;
 	for(int i = 2; i < size; i++)
 	{
 		int seat_num = *(reservation+i);
 		if(seat_num < 0 || seat_num > numRoomSeats)
-			return -3;
+		{
+			error = 1;
+			break;
+		}
 		if(isSeatFree(seats, seat_num))
 		{
 			bookSeat(seats, seat_num, client_pid);
@@ -347,7 +351,7 @@ int isReservationValid(int* reservation, int size)
 		if(booked_seats>=num_wanted_seats)
 			break;
 	}
-	if(booked_seats < num_wanted_seats)
+	if(booked_seats < num_wanted_seats || error == 1)
 	{
 		for (int i = 2; i < size; i++) {
 			int seat_num = *(reservation + i);
@@ -355,6 +359,8 @@ int isReservationValid(int* reservation, int size)
 				freeSeat(seats, seat_num);
 			}
 		}
+		if(error == 1)
+			return -3;
 		return -5;
 	}
 	return 0;
