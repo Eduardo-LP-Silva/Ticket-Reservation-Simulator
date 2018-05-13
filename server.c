@@ -239,12 +239,12 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 	for(int n = 2; n < size; n++)
 	{
 		int seat_num = *(request+n);
-		if(seat_num <= 0 || seat_num > numRoomSeats)
+		if(seat_num <= 0)
 			continue;
 		free(output);
 		output = malloc(512);
 		snprintf(output, WIDTH_SEAT, "%d", seat_num);
-		if (getClientSeat(seats, seat_num) == *request) {
+		if (seat_num <= numRoomSeats && getClientSeat(seats, seat_num) == *request) {
 			bought_seats[index] = seat_num;
 			index++;
 		}
