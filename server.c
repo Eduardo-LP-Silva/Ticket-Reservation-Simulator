@@ -337,7 +337,7 @@ int isReservationValid(int* reservation, int size)
 	for(int i = 2; i < size; i++)
 	{
 		int seat_num = *(reservation+i);
-		if(seat_num < 0)
+		if(seat_num < 0 || seat_num > numRoomSeats)
 			return -3;
 		if(isSeatFree(seats, seat_num))
 		{
