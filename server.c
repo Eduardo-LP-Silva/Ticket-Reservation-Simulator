@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
 	   if(order[0][0] > 0)
 		   continue;
     	int numRead = read(requests, reservations, (MAX_CLI_SEATS + 2) * sizeof(int));
+    	if(numRead <= 0)
+    		continue;
     	int i = 0, j = 0;
         int num = 0;
         while(i < numRead){

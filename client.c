@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
     for(int n = strlen(pid_c); n < WIDTH_PID ; n++)
     	strcat(fifo_name, "0");
     strcat(fifo_name, pid_c);
-    printf("%s\n",fifo_name);
     mkfifo(fifo_name,  0660);
 
     int requests = open("requests", O_WRONLY | O_NONBLOCK), response[argc - 2];
@@ -41,7 +40,7 @@ int main(int argc, char *argv[])
 
     while((double) (clock() - start) / CLOCKS_PER_SEC <= time_out)
     {
-        answer_size = read(answer, response1, (argc - 2)*sizeof(int));
+        answer_size = read(answer, response1, 512);
 
         if(errno == EAGAIN)
         {
