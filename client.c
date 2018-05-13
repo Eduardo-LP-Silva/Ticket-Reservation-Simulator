@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
             break;
     }
     close(answer);
+    unlink(fifo_name);
 
     FILE *clog = fopen("clog.txt", "a");
     FILE *cbook = fopen("cbook.txt", "a");

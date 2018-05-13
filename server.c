@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
     	pthread_join(tids[n], NULL);
 
     writeBookingsFile();
-    //close(requests);
-    //unlink("requests");
+    close(requests);
+    unlink("requests");
     free(seats);
     return 0;
 }
