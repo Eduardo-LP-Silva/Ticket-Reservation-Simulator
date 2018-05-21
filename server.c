@@ -38,16 +38,19 @@ int main(int argc, char *argv[])
     	exit(1);
     }
 
-    char reservations[MAX_CLI_SEATS];
+    char reservations[MAX_ROOM_SEATS];
     clock_t start = clock();
 
     //creating threads
+
     pthread_t tids[num_ticket_offices];
 
+    int thread_id[num_ticket_offices];
     for (t = 0; t < num_ticket_offices; t++)
     {
-    	int err = pthread_create(&tids[t], NULL, handleReservations, (void*) t+1);
-
+	thread_id[t] = t+1;
+    	int err = pthread_create(&tids[t], NULL, handleReservations, &thread_id[t]);
+	printf("%d -- %d\n", thread_id[t], tids[t]);
     	if(err)
     	{
     		printf("Error creating thread");
@@ -81,11 +84,15 @@ int main(int argc, char *argv[])
 
     flag = 1;
     for(int n = 0; n < num_ticket_offices; n++)
+	{
     	pthread_join(tids[n], NULL);
-
+	}
     writeBookingsFile();
     close(requests);
     unlink("requests");
+pthread_mutex_destroy(&mut);
+pthread_mutex_destroy(&mut2);
+pthread_mutex_destroy(&mut3);
     free(seats);
     return 0;
 }
@@ -138,8 +145,9 @@ void writeBookingsFile()
 void *handleReservations(void *arg)
 {
 	pthread_mutex_lock(&mut3);
-	int thread = (int) arg;
+	int thread = *(int*) arg;
 	writeOpenCloseLogFile(thread, 1);
+printf("inside_thread: %d -- %d\n", thread, pthread_self());
 	pthread_mutex_unlock(&mut3);
 
 	while(1)
@@ -174,6 +182,8 @@ void *handleReservations(void *arg)
 			strcat(fifo_name, "0");
 		strcat(fifo_name, pid_c);
 		int fifo = open(fifo_name, O_WRONLY);
+		free(fifo_name);
+		free(pid_c);
 		if(fifo < 0)
 		{
 			printf("error opening fifo: %s\n", fifo_name);
@@ -187,6 +197,7 @@ void *handleReservations(void *arg)
 		pthread_mutex_unlock(&mut3);
 		char* invalid1 = malloc(2);
 		snprintf(invalid1, 3, "%d", invalid);
+		free(invalid1);
 		if(invalid < 0)
 			write(fifo, invalid1, 2);
 		else
@@ -203,13 +214,15 @@ void *handleReservations(void *arg)
 						strcat(booked_seats, "0");
 					strcat(booked_seats, output);
 					strcat(booked_seats, " ");
+					free(output);
 				}
 			}
 			write(fifo, booked_seats, strlen(booked_seats));
+			free(booked_seats);
 		}
 		close(fifo);
 	}
-	return NULL;
+	 return NULL;
 }
 
 void writeRequestSlog(int thread, int answer, int* request, int size)

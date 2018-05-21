@@ -16,11 +16,11 @@
 #define WIDTH_PID 5
 #define WIDTH_XXNN 5
 #define WIDTH_SEAT 4
-#define DELAY()
+#define DELAY() usleep(50000)
 
 struct Seat* seats;
 int requests, fdslog, numRoomSeats, order_size, flag = 0;
-int order[1][MAX_CLI_SEATS];
+int order[1][MAX_ROOM_SEATS];
 pthread_mutex_t mut=PTHREAD_MUTEX_INITIALIZER; //to receive order
 pthread_mutex_t mut2=PTHREAD_MUTEX_INITIALIZER; //to make reservation
 pthread_mutex_t mut3=PTHREAD_MUTEX_INITIALIZER; //to write on file
