@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
     seats = createSeats(num_room_seats);
 
-    fdslog = open("slog.txt", O_WRONLY | O_CREAT | O_TRUNC, 0750);
+    fdslog = open("slog.txt", O_WRONLY | O_CREAT | O_TRUNC, 0640);
 
     remove("requests");
     if(mkfifo("requests", 0660) < 0)
@@ -121,11 +121,12 @@ void writeOpenCloseLogFile(int thread, int open)
 		write(fdslog, "-OPEN\n", 6);
 	else
 		write(fdslog,"-CLOSE\n",7);
+	free(output);
 }
 
 void writeBookingsFile()
 {
-	int fdbook = open("sbook.txt", O_WRONLY | O_CREAT | O_TRUNC, 0750);
+	int fdbook = open("sbook.txt", O_WRONLY | O_CREAT | O_TRUNC, 0640);
 
 	for(int i = 1; i <= numRoomSeats; i++)
 	{
@@ -137,6 +138,7 @@ void writeBookingsFile()
 				write(fdbook, "0", 1);
 			write(fdbook,output,strlen(output));
 			write(fdbook, "\n", 1);
+			free(output);
 		}
 	}
 	close(fdbook);
@@ -175,20 +177,21 @@ printf("inside_thread: %d -- %d\n", thread, pthread_self());
 		pthread_mutex_unlock(&mut);
 
 		int client_pid = order1[0];
-		char* fifo_name = malloc(8* sizeof(char)), *pid_c = malloc(WIDTH_PID*sizeof(char));
-		strcat(fifo_name, "ans");
+		char* pid_c = malloc(WIDTH_PID*sizeof(char));
+		char* fifo_name = malloc(8* sizeof(char));
+		strcpy(fifo_name, "ans");
 		snprintf(pid_c, WIDTH_PID+1, "%d", client_pid);
 		for(int n = strlen(pid_c); n < WIDTH_PID; n++)
 			strcat(fifo_name, "0");
 		strcat(fifo_name, pid_c);
 		int fifo = open(fifo_name, O_WRONLY);
-		free(fifo_name);
-		free(pid_c);
 		if(fifo < 0)
 		{
 			printf("error opening fifo: %s\n", fifo_name);
 			exit(1);
 		}
+		free(fifo_name);
+		free(pid_c);
 		pthread_mutex_lock(&mut2);
 		int invalid = isReservationValid(order1, o_size);
 		pthread_mutex_unlock(&mut2);
@@ -222,7 +225,7 @@ printf("inside_thread: %d -- %d\n", thread, pthread_self());
 		}
 		close(fifo);
 	}
-	 return NULL;
+	return NULL;
 }
 
 void writeRequestSlog(int thread, int answer, int* request, int size)
@@ -267,6 +270,7 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 		write(fdslog, " ", 1);
 	}
 	write(fdslog, "- ", 2);
+	free(output);
 
 	if(answer < 0)
 	{
@@ -287,13 +291,13 @@ void writeRequestSlog(int thread, int answer, int* request, int size)
 
 	for(int i = 0; i < index; i++)
 	{
-		free(output);
 		output = malloc(512);
 		snprintf(output, WIDTH_SEAT, "%d", bought_seats[i]);
 		for(int j = strlen(output); j < WIDTH_SEAT; j++)
 			write(fdslog, "0", 1);
 		write(fdslog, output, strlen(output));
 		write(fdslog, " ", 1);
+		free(output);
 	}
 	write(fdslog, "\n", 1);
 }
