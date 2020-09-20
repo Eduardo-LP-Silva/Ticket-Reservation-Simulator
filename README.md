@@ -1,6 +1,6 @@
 # Ticket Reservation Simulator
 
-This a project developed in the Operative Systems class. It is supposed to simulate a ticket reservation system in which the clients
+Application designed to simulate a ticket reservation system in which the clients
 are represented by different processes (in the same machine) and each ticket booth by a thread of the main server program.  
 
 ## Overview
